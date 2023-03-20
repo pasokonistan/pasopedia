@@ -1,0 +1,16 @@
+baseURL = "localhost:1313"
+languageCode = "ja"
+defaultContentLanguage = "ja"
+title = "Pasopedia"
+theme = "hugo-book"
+
+[markup]
+[markup.goldmark.renderer]
+    unsafe = true
+
+[params]
+    BookTheme = "auto"
+    BookSection = "*"
+    BookSearch = true
+    BookComments = false
+    BookTranslatedOnly = false
