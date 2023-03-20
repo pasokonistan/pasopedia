@@ -1,0 +1,6 @@
+<div class="content-top-container">
+    <h1>{{ .Title }}</h1>
+    {{ with .File }}
+    <a href="https://github.com/pasokonistan/pasopedia/commits/main/content/{{ htmlUnescape .Path }}">編集履歴</a>
+    {{ end }}
+</div>
