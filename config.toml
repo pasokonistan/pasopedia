@@ -1,4 +1,4 @@
-baseURL = "localhost:1313"
+baseURL = "pasopedia.pasokon.site"
 languageCode = "ja"
 defaultContentLanguage = "ja"
 title = "Pasopedia"
