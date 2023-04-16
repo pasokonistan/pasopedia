@@ -1,3 +1,3 @@
 ---
-bookHidden: true
+title: "記事"
 ---
