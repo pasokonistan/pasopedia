@@ -20,7 +20,7 @@ type: docs
 
 ### もやしのナムル
 
-![もやしのナムル](pictures/namul.jpg)
+![もやしのナムル](namul.jpg)
 
 材料
 
