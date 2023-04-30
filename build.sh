@@ -1,5 +1,11 @@
 #!/bin/bash
+cd "$(dirname "$0")" || exit
 
-wget 'https://github.com/gohugoio/hugo/releases/download/v0.111.3/hugo_extended_0.111.3_Linux-64bit.tar.gz'
-tar xvf ./hugo_extended_0.111.3_Linux-64bit.tar.gz
-./hugo
+HUGO_REPO="gohugoio/hugo"
+HUGO_VERSION="0.111.3"
+HUGO_TARGET="Linux-64bit"
+
+mkdir tmp
+wget "https://github.com/${HUGO_REPO}/releases/download/v${HUGO_VERSION}/hugo_extended_${HUGO_VERSION}_${HUGO_TARGET}.tar.gz" -O tmp/hugo.tar.gz
+tar xvf ./tmp/hugo.tar.gz --directory=./tmp
+./tmp/hugo
