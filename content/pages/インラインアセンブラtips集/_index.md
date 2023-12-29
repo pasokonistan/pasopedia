@@ -196,7 +196,7 @@ asm (
 
 この `"memory"` の意味について。
 
-`memory` は、インラインアセンブラ内で、出力に直接関係ないメモリへの書き込みが存在する場合にプログラマが記載しなければいけないキーワードである。
+`memory` は、インラインアセンブラ内で、入出力に直接関係ないメモリへの読み書きが存在する場合にプログラマが記載しなければいけないキーワードである。
 `memory` キーワードをつけると、コンパイラは最適化の過程で `asm` 文をまたいだメモリ操作のリオーダリングを抑制する。
 
 気を付けるポイントとしては、コンパイラ内部で行う最適化の過程での話なので、プロセッサレベルではリオーダリングが起きる可能性がある。
@@ -224,9 +224,15 @@ asm (
     }
 ```
 
-ではどうしているかというと、各言語のフロントエンドがLLVMに渡す際に関数属性を付けて渡すことで実現しているらしい。
-ちなみにRustだと、[デフォルトで `memory` clobberをつけているのと同等のようで、 `nomem` 属性をつけることでこれを解除する](https://doc.rust-lang.org/reference/inline-assembly.html#options) らしい。
+どうやら、LLVMインラインアセンブラはmemory operandを介したメモリアクセスについて記述できるが、memory clobberのような入出力に関係ないメモリアクセスを表現できないようである。
+ただし、LLVMのインラインアセンブラは内部的に関数相当の実装をしており、かつ関数属性はデフォルトでメモリ読み書きが起きるという仮定があるのでmemory clobberがない場合でも問題になっていない。
+逆に関数属性として読み込みも書き込みもない・読み込みがあるが書き込みがないといった場合は属性を付与する必要がある。
+ちなみにRustだと、[`nomem` 属性をつけることでこれを解除する](https://doc.rust-lang.org/reference/inline-assembly.html#options) ようである。
 
 > nomem: The asm! blocks does not read or write to any memory. This allows the compiler to cache the values of modified global variables in registers across the asm! block since it knows that they are not read or written to by the asm!. The compiler also assumes that this asm! block does not perform any kind of synchronization with other threads, e.g. via fences.
 
 ちなみにこの辺の話は [pasopediaのissue](https://github.com/pasokonistan/pasopedia/issues/17) に寄せられた情報ほぼそのままである、詳しい人はそちらを読んだ方がいいかもしれない。
+
+### 参考リンク
+
+- [Extended Asm (Using the GNU Compiler Collection (GCC))](https://gcc.gnu.org/onlinedocs/gcc/Extended-Asm.html#Clobbers-and-Scratch-Registers-1)
