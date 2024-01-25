@@ -204,7 +204,7 @@ asm (
 
 ### LLVMにおける `memory` clobberの状況（@kubo39さんからの情報）
 
-@kubo39 さんが教えてくれたのだが、LLVMのインラインアセンブラでは、 `memory` clobberを無視するらしい。
+[@kubo39](https://github.com/kubo39) さんが教えてくれたのだが、LLVMのインラインアセンブラでは、 `memory` clobberを無視するらしい。
 実際に教えてもらった [LLVMのコード](https://github.com/llvm/llvm-project/blob/a134abf4be132cfff2fc5132d6226db919c0865b/llvm/lib/CodeGen/GlobalISel/InlineAsmLowering.cpp#L524-L537) を見ると、clobberの部分はレジスタ制約しか見ていない（っぽい）ことがわかる。
 
 ```cpp
@@ -230,6 +230,17 @@ asm (
 ちなみにRustだと、[`nomem` 属性をつけることでこれを解除する](https://doc.rust-lang.org/reference/inline-assembly.html#options) ようである。
 
 > nomem: The asm! blocks does not read or write to any memory. This allows the compiler to cache the values of modified global variables in registers across the asm! block since it knows that they are not read or written to by the asm!. The compiler also assumes that this asm! block does not perform any kind of synchronization with other threads, e.g. via fences.
+
+`nomem` 属性の実装部分の [Rustコンパイラのコード](https://github.com/rust-lang/rust/blob/558ac1cfb7c214d06ca471885a57caa6c8301bae/compiler/rustc_codegen_llvm/src/asm.rs#L268-L273) を確認すると、ここでもLLVMに無視される旨が書かれている。
+
+```rust
+        if !options.contains(InlineAsmOptions::NOMEM) {
+            // This is actually ignored by LLVM, but it's probably best to keep
+            // it just in case. LLVM instead uses the ReadOnly/ReadNone
+            // attributes on the call instruction to optimize.
+            constraints.push("~{memory}".to_string());
+        }
+```
 
 ちなみにこの辺の話は [pasopediaのissue](https://github.com/pasokonistan/pasopedia/issues/17) に寄せられた情報ほぼそのままである、詳しい人はそちらを読んだ方がいいかもしれない。
 
