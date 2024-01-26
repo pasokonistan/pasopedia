@@ -180,3 +180,70 @@ int main(void) {
 naked属性を指定した関数 `f()` のプロローグとエピローグが消えていることがわかる。
 
 なお、このプログラムは `f()` に突入した後、 `114f:	0f 0b ud2` でSegmentation faultする。
+
+## 追記： `memory` clobberについて
+
+[レジスタに値を割り付けたい](#レジスタに値を割り付けたい) の節で登場した、
+
+```c
+asm (
+    "some instruction"
+    :
+    :
+    : "memory"
+);
+```
+
+この `"memory"` の意味について。
+
+`memory` は、インラインアセンブラ内で、入出力に直接関係ないメモリへの読み書きが存在する場合にプログラマが記載しなければいけないキーワードである。
+`memory` キーワードをつけると、コンパイラは最適化の過程で `asm` 文をまたいだメモリ操作のリオーダリングを抑制する。
+
+気を付けるポイントとしては、コンパイラ内部で行う最適化の過程での話なので、プロセッサレベルではリオーダリングが起きる可能性がある。
+そのため、プロセッサレベルでメモリ操作のリオーダリングを抑制する場合はfence命令を用いる必要がある。
+
+### LLVMにおける `memory` clobberの状況（@kubo39さんからの情報）
+
+[@kubo39](https://github.com/kubo39) さんが教えてくれたのだが、LLVMのインラインアセンブラでは、 `memory` clobberを無視するらしい。
+実際に教えてもらった [LLVMのコード](https://github.com/llvm/llvm-project/blob/a134abf4be132cfff2fc5132d6226db919c0865b/llvm/lib/CodeGen/GlobalISel/InlineAsmLowering.cpp#L524-L537) を見ると、clobberの部分はレジスタ制約しか見ていない（っぽい）ことがわかる。
+
+```cpp
+    case InlineAsm::isClobber: {
+
+      const unsigned NumRegs = OpInfo.Regs.size();
+      if (NumRegs > 0) {
+        unsigned Flag = InlineAsm::Flag(InlineAsm::Kind::Clobber, NumRegs);
+        Inst.addImm(Flag);
+
+        for (Register Reg : OpInfo.Regs) {
+          Inst.addReg(Reg, RegState::Define | RegState::EarlyClobber |
+                               getImplRegState(Reg.isPhysical()));
+        }
+      }
+      break;
+    }
+```
+
+どうやら、LLVMインラインアセンブラはmemory operandを介したメモリアクセスについて記述できるが、memory clobberのような入出力に関係ないメモリアクセスを表現できないようである。
+ただし、LLVMのインラインアセンブラは内部的に関数相当の実装をしており、かつ関数属性はデフォルトでメモリ読み書きが起きるという仮定があるのでmemory clobberがない場合でも問題になっていない。
+逆に関数属性として読み込みも書き込みもない・読み込みがあるが書き込みがないといった場合は属性を付与する必要がある。
+ちなみにRustだと、[`nomem` 属性をつけることでこれを解除する](https://doc.rust-lang.org/reference/inline-assembly.html#options) ようである。
+
+> nomem: The asm! blocks does not read or write to any memory. This allows the compiler to cache the values of modified global variables in registers across the asm! block since it knows that they are not read or written to by the asm!. The compiler also assumes that this asm! block does not perform any kind of synchronization with other threads, e.g. via fences.
+
+`nomem` 属性の実装部分の [Rustコンパイラのコード](https://github.com/rust-lang/rust/blob/558ac1cfb7c214d06ca471885a57caa6c8301bae/compiler/rustc_codegen_llvm/src/asm.rs#L268-L273) を確認すると、ここでもLLVMに無視される旨が書かれている。
+
+```rust
+        if !options.contains(InlineAsmOptions::NOMEM) {
+            // This is actually ignored by LLVM, but it's probably best to keep
+            // it just in case. LLVM instead uses the ReadOnly/ReadNone
+            // attributes on the call instruction to optimize.
+            constraints.push("~{memory}".to_string());
+        }
+```
+
+ちなみにこの辺の話は [pasopediaのissue](https://github.com/pasokonistan/pasopedia/issues/17) に寄せられた情報ほぼそのままである、詳しい人はそちらを読んだ方がいいかもしれない。
+
+### 参考リンク
+
+- [Extended Asm (Using the GNU Compiler Collection (GCC))](https://gcc.gnu.org/onlinedocs/gcc/Extended-Asm.html#Clobbers-and-Scratch-Registers-1)
