@@ -10,7 +10,6 @@ type: docs
 - コンパイラ: clang 17.0.6
 - アーキテクチャ: x86_64
 - GNU readelf: GNU Binutils 2.38
-- eu-readelf: elfutils 0.186
 
 ## 文字列
 
@@ -110,18 +109,16 @@ $ readelf -WS helloworld
 
 .rodataセクションはmergeableなので、すべての.rodata.*な情報がまとめられてしまった。
 
-特定の文字列がどこに配置されているかを知りたい場合は、elfutilsの提供しているreadelfに便利なオプションがあるのでこれを利用するとよい。
+特定の文字列がどこに配置されているかを知りたい場合は、readelf -pを利用するとよい。
 
 ```console
-$ eu-readelf --strings=.rodata helloworld
+$ readelf -p .rodata helloworld
 
-String section [16] '.rodata' contains 19 bytes at offset 0x2000:
-  [     0]
-  [     2]
-  [     4]  Hello, World!
+String dump of section '.rodata':
+  [     4]  Hello, World!\n
 ```
 
---stringsオプションは指定したセクションの文字列っぽいものを探索し(stringsコマンドのような動きをする)、それをみつけたときにオフセット情報とともに出力してくれる。
+-pオプションは指定したセクションの文字列っぽいものを探索し(stringsコマンドのような動きをする)、それをみつけたときにオフセット情報とともに出力してくれる。
 
 今回のプログラムの例では文字列Hello, World!は.rodataセクションの先頭からオフセット4の位置に配置されていることがわかる。
 
