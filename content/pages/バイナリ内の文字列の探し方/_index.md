@@ -59,7 +59,7 @@ Key to Flags:
   D (mbind), l (large), p (processor specific)
 ```
 
-ここで各セクションのフラグに注目してみると、.rodata.str1.1と.commentにはS(strings)というフラグがついていることがわかる。これはヌル終端な文字列データを含んでいることを示すフラグであり、つまり文字列データが内包されている箇所である。ここでついでに.rodata.str1.1にM(merge)フラグがついていることも覚えておいてほしい。
+ここで各セクションのフラグに注目してみると、.rodata.str1.1と.commentにはS(strings)というフラグがついていることがわかる。これはヌル終端な文字列データを含んでいることを示すフラグであり、つまり文字列データが内包されている箇所である。
 
 readelfの-xオプションを使うと、そのセクションの中身のデータをみることができる。
 
@@ -113,7 +113,21 @@ $ readelf -WS helloworld
   [25] .bss              NOBITS          0000000000004030 003030 000008 00  WA  0   0  1
 ```
 
-上記で少しだけ触れたのだが、.rodata.str1.1はM(merge)フラグがついていた。これはそのセクションが他のものと結合されるかもしれないという意味を持つ。その結果、実行ファイル内の.rodataセクションにはすべての.rodata.*な情報がまとめられてしまった。
+デフォルトで利用されているリンカスクリプトの記述により、実行ファイル内の.rodataセクションにはすべての.rodata.*な情報がまとめられてしまった。
+
+リンカスクリプトの内容については以下のように確認できる。
+
+```console
+$ ld --verbose| grep \.rodata
+      *(.rela.rodata .rela.rodata.* .rela.gnu.linkonce.r.*)
+      *(.rela.lrodata .rela.lrodata.* .rela.gnu.linkonce.lr.*)
+  /* Adjust the address for the rodata segment.  We want to adjust up to
+  . = SEGMENT_START("rodata-segment", ALIGN(CONSTANT (MAXPAGESIZE)) + (. & (CONSTANT (MAXPAGESIZE) - 1)));
+  .rodata         : { *(.rodata .rodata.* .gnu.linkonce.r.*) }
+  .rodata1        : { *(.rodata1) }
+  .lrodata   ALIGN(CONSTANT (MAXPAGESIZE)) + (. & (CONSTANT (MAXPAGESIZE) - 1)) :
+    *(.lrodata .lrodata.* .gnu.linkonce.lr.*)
+```
 
 ここで特定の文字列がどこに配置されているかを知りたい場合は、readelf -pを利用するとよい。
 
